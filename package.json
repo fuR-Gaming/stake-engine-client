@@ -2,8 +2,8 @@
   "name": "stake-engine-client",
   "version": "1.0.0",
   "description": "Lightweight TypeScript client extracted from Stake Engine web-sdk for RGS (Remote Gaming Server) API communication. Contains only essential backend communication code without Svelte dependencies or slot game scripts.",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
