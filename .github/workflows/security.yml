@@ -1,0 +1,232 @@
+name: Security
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run npm audit
+      run: |
+        echo "Running npm audit..."
+        npm audit --audit-level moderate || true
+        
+        # Generate audit report
+        npm audit --json > audit-report.json || true
+        
+        # Check for high/critical vulnerabilities
+        HIGH_VULNS=$(npm audit --audit-level high --json | jq -r '.metadata.vulnerabilities.high // 0')
+        CRITICAL_VULNS=$(npm audit --audit-level critical --json | jq -r '.metadata.vulnerabilities.critical // 0')
+        
+        echo "High vulnerabilities: $HIGH_VULNS"
+        echo "Critical vulnerabilities: $CRITICAL_VULNS"
+        
+        if [ "$CRITICAL_VULNS" -gt 0 ]; then
+          echo "❌ Critical vulnerabilities found!"
+          npm audit --audit-level critical
+          exit 1
+        elif [ "$HIGH_VULNS" -gt 0 ]; then
+          echo "⚠️ High vulnerabilities found!"
+          npm audit --audit-level high
+          exit 1
+        else
+          echo "✅ No high or critical vulnerabilities found"
+        fi
+    
+    - name: Upload audit report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: npm-audit-report
+        path: audit-report.json
+        retention-days: 30
+
+  codeql-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    strategy:
+      matrix:
+        language: [ 'javascript' ]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build project
+      run: npm run build
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  license-compliance:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Check license compliance
+      run: |
+        # Install license checker
+        npm install -g license-checker
+        
+        # Generate license report
+        license-checker --summary --onlyAllow 'MIT;BSD-2-Clause;BSD-3-Clause;Apache-2.0;ISC;Unlicense' || true
+        
+        # Detailed license report
+        echo "Generating detailed license report..."
+        license-checker --json > licenses.json
+        
+        # Check for problematic licenses
+        PROBLEMATIC=$(license-checker --summary --exclude 'MIT,BSD-2-Clause,BSD-3-Clause,Apache-2.0,ISC,Unlicense' --onlyunknown | grep -c "└─" || echo "0")
+        
+        if [ "$PROBLEMATIC" -gt 0 ]; then
+          echo "⚠️ Found packages with non-standard licenses:"
+          license-checker --summary --exclude 'MIT,BSD-2-Clause,BSD-3-Clause,Apache-2.0,ISC,Unlicense' --onlyunknown
+          echo "Please review these licenses for compliance"
+        else
+          echo "✅ All licenses are compliant"
+        fi
+    
+    - name: Upload license report
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-report
+        path: licenses.json
+        retention-days: 30
+
+  security-scorecard:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      actions: read
+      contents: read
+    
+    steps:
+    - name: Run analysis
+      uses: ossf/scorecard-action@v2.3.1
+      with:
+        results_file: results.sarif
+        results_format: sarif
+        publish_results: true
+    
+    - name: Upload SARIF results to code-scanning
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: results.sarif
+
+  security-summary:
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, codeql-analysis, secret-scan, license-compliance]
+    if: always()
+    
+    steps:
+    - name: Security Summary
+      run: |
+        echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Dependency scan results
+        if [ "${{ needs.dependency-scan.result }}" = "success" ]; then
+          echo "✅ **Dependency Scan**: Passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Dependency Scan**: Failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # CodeQL results
+        if [ "${{ needs.codeql-analysis.result }}" = "success" ]; then
+          echo "✅ **CodeQL Analysis**: Passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **CodeQL Analysis**: Failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Secret scan results
+        if [ "${{ needs.secret-scan.result }}" = "success" ]; then
+          echo "✅ **Secret Scan**: Passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Secret Scan**: Failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # License compliance results
+        if [ "${{ needs.license-compliance.result }}" = "success" ]; then
+          echo "✅ **License Compliance**: Passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **License Compliance**: Needs Review" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "View detailed results in the workflow logs above." >> $GITHUB_STEP_SUMMARY
