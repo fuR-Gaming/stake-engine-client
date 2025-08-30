@@ -83,7 +83,8 @@ const getUrlParams = () => {
 	return {
 		sessionID: urlParams.get('sessionID'),
 		rgsUrl: urlParams.get('rgs_url'),
-		language: urlParams.get('lang') || 'en'
+		language: urlParams.get('lang') || 'en',
+		currency: urlParams.get('currency') || 'USD'
 	};
 };
 
@@ -137,11 +138,9 @@ export const requestAuthenticate = async (options?: {
  * @example
  * ```typescript
  * const bet = await requestBet({
- *   sessionID: 'player-session-123',
- *   currency: 'USD',
  *   amount: 1.00,  // $1.00 (automatically converted to API format)
- *   mode: 'base',
- *   rgsUrl: 'api.stakeengine.com'
+ *   mode: 'base'
+ *   // sessionID, currency, rgsUrl from URL params if not provided
  * });
  * 
  * console.log('Round ID:', bet.round?.roundID);
@@ -150,15 +149,16 @@ export const requestAuthenticate = async (options?: {
  * ```
  */
 export const requestBet = async (options: {
-	currency: string;
 	amount: number;
 	mode: string;
+	currency?: string;
 	sessionID?: string;
 	rgsUrl?: string;
 }): Promise<components['schemas']['res_play']> => {
 	const urlParams = getUrlParams();
 	const sessionID = options.sessionID || urlParams.sessionID;
 	const rgsUrl = options.rgsUrl || urlParams.rgsUrl;
+	const currency = options.currency || urlParams.currency;
 
 	if (!sessionID) throw new Error('sessionID is required (provide in options or URL param)');
 	if (!rgsUrl) throw new Error('rgsUrl is required (provide in options or rgs_url URL param)');
@@ -167,7 +167,7 @@ export const requestBet = async (options: {
 		url: '/wallet/play',
 		variables: {
 			mode: options.mode,
-			currency: options.currency,
+			currency,
 			sessionID,
 			amount: options.amount * API_AMOUNT_MULTIPLIER, // Convert to API format
 		},

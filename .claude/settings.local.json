@@ -13,7 +13,10 @@
       "Bash(git tag:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm publish:*)",
+      "Bash(git clone:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

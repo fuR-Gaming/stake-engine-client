@@ -30,7 +30,7 @@ npm install stake-engine-client
 
 ### Option 1: Using URL Parameters (Browser)
 
-If your URL contains the required parameters (`?sessionID=player-123&rgs_url=api.stakeengine.com&lang=en`), you can call functions without options:
+If your URL contains the required parameters (`?sessionID=player-123&rgs_url=api.stakeengine.com&lang=en&currency=USD`), you can call functions without options:
 
 ```typescript
 import { requestAuthenticate, requestBet } from 'stake-engine-client';
@@ -43,9 +43,9 @@ console.log('Available bet levels:', auth.config?.betLevels);
 
 // Place a bet (only specify required bet details)
 const bet = await requestBet({
-  currency: 'USD',
   amount: 1.00, // $1.00 (automatically converted)
   mode: 'base'
+  // currency defaults to USD from URL param or 'USD'
 });
 
 console.log('Round ID:', bet.round?.roundID);
@@ -104,6 +104,7 @@ const auth = await requestAuthenticate({
 - `sessionID` - Player session ID
 - `rgs_url` - RGS server URL
 - `lang` - Language code (optional, defaults to 'en')
+- `currency` - Currency code (optional, defaults to 'USD')
 
 **Returns:** `AuthenticateResponse`
 - `balance` - Player's current balance
@@ -118,11 +119,11 @@ const auth = await requestAuthenticate({
 Place a bet and start a new round.
 
 ```typescript
-// Uses URL parameters for sessionID/rgsUrl automatically
+// Uses URL parameters for sessionID/rgsUrl/currency automatically
 const bet = await requestBet({
-  currency: string,    // Required: Currency code (e.g., 'USD')
   amount: number,      // Required: Dollar amount (e.g., 1.00 for $1)
   mode: string,        // Required: Bet mode (e.g., 'base')
+  currency?: string,   // From URL param 'currency' if not provided (defaults to 'USD')
   sessionID?: string,  // From URL param 'sessionID' if not provided
   rgsUrl?: string      // From URL param 'rgs_url' if not provided
 });
