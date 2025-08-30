@@ -28,6 +28,32 @@ npm install stake-engine-client
 
 ## Quick Start
 
+### Option 1: Using URL Parameters (Browser)
+
+If your URL contains the required parameters (`?sessionID=player-123&rgs_url=api.stakeengine.com&lang=en`), you can call functions without options:
+
+```typescript
+import { requestAuthenticate, requestBet } from 'stake-engine-client';
+
+// Authenticate player (uses URL params automatically)
+const auth = await requestAuthenticate();
+
+console.log('Player balance:', auth.balance?.amount);
+console.log('Available bet levels:', auth.config?.betLevels);
+
+// Place a bet (only specify required bet details)
+const bet = await requestBet({
+  currency: 'USD',
+  amount: 1.00, // $1.00 (automatically converted)
+  mode: 'base'
+});
+
+console.log('Round ID:', bet.round?.roundID);
+console.log('Payout multiplier:', bet.round?.payoutMultiplier);
+```
+
+### Option 2: Explicit Parameters
+
 ```typescript
 import { requestAuthenticate, requestBet } from 'stake-engine-client';
 
@@ -58,17 +84,26 @@ console.log('Payout multiplier:', bet.round?.payoutMultiplier);
 
 ### Authentication
 
-#### `requestAuthenticate(options)`
+#### `requestAuthenticate(options?)`
 
 Authenticate a player session with the RGS.
 
 ```typescript
+// Uses URL parameters automatically
+const auth = await requestAuthenticate();
+
+// Or provide explicit options
 const auth = await requestAuthenticate({
-  sessionID: string,
-  rgsUrl: string,
-  language: string
+  sessionID?: string,    // From URL param 'sessionID' if not provided
+  rgsUrl?: string,       // From URL param 'rgs_url' if not provided  
+  language?: string      // From URL param 'lang' if not provided (defaults to 'en')
 });
 ```
+
+**URL Parameters:**
+- `sessionID` - Player session ID
+- `rgs_url` - RGS server URL
+- `lang` - Language code (optional, defaults to 'en')
 
 **Returns:** `AuthenticateResponse`
 - `balance` - Player's current balance
@@ -83,12 +118,13 @@ const auth = await requestAuthenticate({
 Place a bet and start a new round.
 
 ```typescript
+// Uses URL parameters for sessionID/rgsUrl automatically
 const bet = await requestBet({
-  sessionID: string,
-  currency: string,
-  amount: number,      // Dollar amount (e.g., 1.00 for $1)
-  mode: string,        // Bet mode (e.g., 'base')
-  rgsUrl: string
+  currency: string,    // Required: Currency code (e.g., 'USD')
+  amount: number,      // Required: Dollar amount (e.g., 1.00 for $1)
+  mode: string,        // Required: Bet mode (e.g., 'base')
+  sessionID?: string,  // From URL param 'sessionID' if not provided
+  rgsUrl?: string      // From URL param 'rgs_url' if not provided
 });
 ```
 
@@ -97,27 +133,35 @@ const bet = await requestBet({
 - `balance` - Updated player balance
 - `status` - Operation status
 
-#### `requestEndRound(options)`
+#### `requestEndRound(options?)`
 
 End the current betting round.
 
 ```typescript
+// Uses URL parameters automatically
+const result = await requestEndRound();
+
+// Or provide explicit options
 const result = await requestEndRound({
-  sessionID: string,
-  rgsUrl: string
+  sessionID?: string,  // From URL param 'sessionID' if not provided
+  rgsUrl?: string      // From URL param 'rgs_url' if not provided
 });
 ```
 
 ### Balance Management
 
-#### `requestBalance(options)`
+#### `requestBalance(options?)`
 
 Get current player balance.
 
 ```typescript
+// Uses URL parameters automatically
+const balance = await requestBalance();
+
+// Or provide explicit options
 const balance = await requestBalance({
-  sessionID: string,
-  rgsUrl: string
+  sessionID?: string,  // From URL param 'sessionID' if not provided
+  rgsUrl?: string      // From URL param 'rgs_url' if not provided
 });
 ```
 
@@ -129,9 +173,9 @@ Track a game event for bet progress.
 
 ```typescript
 const result = await requestEndEvent({
-  sessionID: string,
-  eventIndex: number,
-  rgsUrl: string
+  eventIndex: number,  // Required: Event index number
+  sessionID?: string,  // From URL param 'sessionID' if not provided
+  rgsUrl?: string      // From URL param 'rgs_url' if not provided
 });
 ```
 
@@ -143,8 +187,8 @@ Search for specific game results (useful for testing).
 
 ```typescript
 const results = await requestForceResult({
-  mode: string,
-  search: {
+  mode: string,        // Required: Search mode
+  search: {            // Required: Search criteria
     bookID?: number,
     kind?: number,
     symbol?: string,
@@ -152,7 +196,7 @@ const results = await requestForceResult({
     wildMult?: number,
     gameType?: string
   },
-  rgsUrl: string
+  rgsUrl?: string      // From URL param 'rgs_url' if not provided
 });
 ```
 

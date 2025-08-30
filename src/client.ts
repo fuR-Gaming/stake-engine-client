@@ -75,6 +75,19 @@ export const stakeEngineClient = new StakeEngineClient();
 // High-level API methods using the client
 
 /**
+ * Get URL parameters for common RGS values
+ * @returns Object with sessionID, rgsUrl, and language from URL params
+ */
+const getUrlParams = () => {
+	const urlParams = new URLSearchParams(window.location.search);
+	return {
+		sessionID: urlParams.get('sessionID'),
+		rgsUrl: urlParams.get('rgs_url'),
+		language: urlParams.get('lang') || 'en'
+	};
+};
+
+/**
  * Authenticate a player session with the RGS
  * 
  * @param options - Authentication parameters
@@ -92,17 +105,71 @@ export const stakeEngineClient = new StakeEngineClient();
  * console.log('Available bet levels:', auth.config?.betLevels);
  * ```
  */
-export const requestAuthenticate = async (options: {
-	sessionID: string;
-	rgsUrl: string;
-	language: string;
+export const requestAuthenticate = async (options?: {
+	sessionID?: string;
+	rgsUrl?: string;
+	language?: string;
 }): Promise<components['schemas']['res_authenticate']> => {
+	const urlParams = getUrlParams();
+	const sessionID = options?.sessionID || urlParams.sessionID;
+	const rgsUrl = options?.rgsUrl || urlParams.rgsUrl;
+	const language = options?.language || urlParams.language;
+
+	if (!sessionID) throw new Error('sessionID is required (provide in options or URL param)');
+	if (!rgsUrl) throw new Error('rgsUrl is required (provide in options or rgs_url URL param)');
 	return stakeEngineClient.post({
-		rgsUrl: options.rgsUrl,
+		rgsUrl,
 		url: '/wallet/authenticate',
 		variables: {
-			sessionID: options.sessionID,
-			language: options.language,
+			sessionID,
+			language,
+		},
+	});
+};
+
+
+/**
+ * Place a bet and start a new round
+ * 
+ * @param options - Bet parameters
+ * @returns Bet response with round details, balance, and game state
+ * 
+ * @example
+ * ```typescript
+ * const bet = await requestBet({
+ *   sessionID: 'player-session-123',
+ *   currency: 'USD',
+ *   amount: 1.00,  // $1.00 (automatically converted to API format)
+ *   mode: 'base',
+ *   rgsUrl: 'api.stakeengine.com'
+ * });
+ * 
+ * console.log('Round ID:', bet.round?.roundID);
+ * console.log('Payout multiplier:', bet.round?.payoutMultiplier);
+ * console.log('New balance:', bet.balance?.amount);
+ * ```
+ */
+export const requestBet = async (options: {
+	currency: string;
+	amount: number;
+	mode: string;
+	sessionID?: string;
+	rgsUrl?: string;
+}): Promise<components['schemas']['res_play']> => {
+	const urlParams = getUrlParams();
+	const sessionID = options.sessionID || urlParams.sessionID;
+	const rgsUrl = options.rgsUrl || urlParams.rgsUrl;
+
+	if (!sessionID) throw new Error('sessionID is required (provide in options or URL param)');
+	if (!rgsUrl) throw new Error('rgsUrl is required (provide in options or rgs_url URL param)');
+	return stakeEngineClient.post({
+		rgsUrl,
+		url: '/wallet/play',
+		variables: {
+			mode: options.mode,
+			currency: options.currency,
+			sessionID,
+			amount: options.amount * API_AMOUNT_MULTIPLIER, // Convert to API format
 		},
 	});
 };
@@ -125,15 +192,21 @@ export const requestAuthenticate = async (options: {
  * }
  * ```
  */
-export const requestEndRound = async (options: {
-	sessionID: string;
-	rgsUrl: string;
+export const requestEndRound = async (options?: {
+	sessionID?: string;
+	rgsUrl?: string;
 }): Promise<components['schemas']['res_end_round']> => {
+	const urlParams = getUrlParams();
+	const sessionID = options?.sessionID || urlParams.sessionID;
+	const rgsUrl = options?.rgsUrl || urlParams.rgsUrl;
+
+	if (!sessionID) throw new Error('sessionID is required (provide in options or URL param)');
+	if (!rgsUrl) throw new Error('rgsUrl is required (provide in options or rgs_url URL param)');
 	return stakeEngineClient.post({
-		rgsUrl: options.rgsUrl,
+		rgsUrl,
 		url: '/wallet/end-round',
 		variables: {
-			sessionID: options.sessionID,
+			sessionID,
 		},
 	});
 };
@@ -154,15 +227,21 @@ export const requestEndRound = async (options: {
  * ```
  */
 export const requestEndEvent = async (options: {
-	sessionID: string;
 	eventIndex: number;
-	rgsUrl: string;
+	sessionID?: string;
+	rgsUrl?: string;
 }): Promise<components['schemas']['res_event']> => {
+	const urlParams = getUrlParams();
+	const sessionID = options.sessionID || urlParams.sessionID;
+	const rgsUrl = options.rgsUrl || urlParams.rgsUrl;
+
+	if (!sessionID) throw new Error('sessionID is required (provide in options or URL param)');
+	if (!rgsUrl) throw new Error('rgsUrl is required (provide in options or rgs_url URL param)');
 	return stakeEngineClient.post({
-		rgsUrl: options.rgsUrl,
+		rgsUrl,
 		url: '/bet/event',
 		variables: {
-			sessionID: options.sessionID,
+			sessionID,
 			event: `${options.eventIndex}`,
 		},
 	});
@@ -197,54 +276,18 @@ export const requestForceResult = async (options: {
 		wildMult?: number;
 		gameType?: string;
 	};
-	rgsUrl: string;
+	rgsUrl?: string;
 }): Promise<components['schemas']['res_search']> => {
+	const urlParams = getUrlParams();
+	const rgsUrl = options.rgsUrl || urlParams.rgsUrl;
+
+	if (!rgsUrl) throw new Error('rgsUrl is required (provide in options or rgs_url URL param)');
 	return stakeEngineClient.post({
-		rgsUrl: options.rgsUrl,
+		rgsUrl,
 		url: '/game/search',
 		variables: {
 			mode: options.mode,
 			search: options.search,
-		},
-	});
-};
-
-/**
- * Place a bet and start a new round
- * 
- * @param options - Bet parameters
- * @returns Bet response with round details, balance, and game state
- * 
- * @example
- * ```typescript
- * const bet = await requestBet({
- *   sessionID: 'player-session-123',
- *   currency: 'USD',
- *   amount: 1.00,  // $1.00 (automatically converted to API format)
- *   mode: 'base',
- *   rgsUrl: 'api.stakeengine.com'
- * });
- * 
- * console.log('Round ID:', bet.round?.roundID);
- * console.log('Payout multiplier:', bet.round?.payoutMultiplier);
- * console.log('New balance:', bet.balance?.amount);
- * ```
- */
-export const requestBet = async (options: {
-	sessionID: string;
-	currency: string;
-	amount: number;
-	mode: string;
-	rgsUrl: string;
-}): Promise<components['schemas']['res_play']> => {
-	return stakeEngineClient.post({
-		rgsUrl: options.rgsUrl,
-		url: '/wallet/play',
-		variables: {
-			mode: options.mode,
-			currency: options.currency,
-			sessionID: options.sessionID,
-			amount: options.amount * API_AMOUNT_MULTIPLIER, // Convert to API format
 		},
 	});
 };
@@ -265,15 +308,21 @@ export const requestBet = async (options: {
  * console.log('Current balance:', balance.balance?.amount, balance.balance?.currency);
  * ```
  */
-export const requestBalance = async (options: {
-	sessionID: string;
-	rgsUrl: string;
+export const requestBalance = async (options?: {
+	sessionID?: string;
+	rgsUrl?: string;
 }): Promise<components['schemas']['res_Balance']> => {
+	const urlParams = getUrlParams();
+	const sessionID = options?.sessionID || urlParams.sessionID;
+	const rgsUrl = options?.rgsUrl || urlParams.rgsUrl;
+
+	if (!sessionID) throw new Error('sessionID is required (provide in options or URL param)');
+	if (!rgsUrl) throw new Error('rgsUrl is required (provide in options or rgs_url URL param)');
 	return stakeEngineClient.post({
-		rgsUrl: options.rgsUrl,
+		rgsUrl,
 		url: '/wallet/balance',
 		variables: {
-			sessionID: options.sessionID,
+			sessionID,
 		},
 	});
 };
