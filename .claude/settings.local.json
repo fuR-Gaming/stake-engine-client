@@ -10,7 +10,10 @@
       "Bash(npx tsc:*)",
       "Bash(npm audit:*)",
       "Bash(npm i:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

@@ -56,14 +56,14 @@ export type EndRoundResponse = import('./types').components['schemas']['res_end_
 /**
  * Version information
  */
-export const version = '1.0.0';
+export const version = '1.0.1';
 
 /**
  * Package metadata
  */
 export const metadata = {
 	name: 'stake-engine-client',
-	version: '1.0.0',
+	version: '1.0.1',
 	description: 'Lightweight TypeScript client extracted from Stake Engine web-sdk for RGS API communication',
 	source: 'https://github.com/StakeEngine/web-sdk',
 	repository: 'https://github.com/fuR-Gaming/stake-engine-client',
