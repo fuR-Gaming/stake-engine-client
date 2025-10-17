@@ -37,8 +37,10 @@ export class StakeEngineClient {
 
 		if (response.status !== 200) {
 			console.error('RGS API error:', response.status, response.statusText);
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(`RGS API error: ${response.status} ${response.statusText}${errorData.message ? ` - ${errorData.message}` : ''}`);
 		}
-		
+
 		const data = await response.json();
 		return data as TResponse;
 	}
@@ -49,9 +51,9 @@ export class StakeEngineClient {
 	 * @param options - Request configuration
 	 * @returns Typed response data
 	 */
-	async get<T extends keyof paths>(options: { 
-		url: T; 
-		rgsUrl: string; 
+	async get<T extends keyof paths>(options: {
+		url: T;
+		rgsUrl: string;
 	}): Promise<any> {
 		const response = await fetcher({
 			method: 'GET',
@@ -60,8 +62,10 @@ export class StakeEngineClient {
 
 		if (response.status !== 200) {
 			console.error('RGS API error:', response.status, response.statusText);
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(`RGS API error: ${response.status} ${response.statusText}${errorData.message ? ` - ${errorData.message}` : ''}`);
 		}
-		
+
 		const data = await response.json();
 		return data;
 	}

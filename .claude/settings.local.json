@@ -16,7 +16,9 @@
       "Bash(node:*)",
       "Bash(npm publish:*)",
       "Bash(git clone:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(gh:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
