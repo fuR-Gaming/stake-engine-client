@@ -36,9 +36,9 @@ export class StakeEngineClient {
 		});
 
 		if (response.status !== 200) {
-			console.error('RGS API error:', response.status, response.statusText);
 			const errorData = await response.json().catch(() => ({}));
-			throw new Error(`RGS API error: ${response.status} ${response.statusText}${errorData.message ? ` - ${errorData.message}` : ''}`);
+			console.error('RGS API error:', errorData.message);
+			throw new Error(errorData.message || `RGS API error: ${response.status} ${response.statusText}`);
 		}
 
 		const data = await response.json();
@@ -61,9 +61,9 @@ export class StakeEngineClient {
 		});
 
 		if (response.status !== 200) {
-			console.error('RGS API error:', response.status, response.statusText);
 			const errorData = await response.json().catch(() => ({}));
-			throw new Error(`RGS API error: ${response.status} ${response.statusText}${errorData.message ? ` - ${errorData.message}` : ''}`);
+			console.error('RGS API error:', errorData.message);
+			throw new Error(errorData.message || `RGS API error: ${response.status} ${response.statusText}`);
 		}
 
 		const data = await response.json();
